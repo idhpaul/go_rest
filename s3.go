@@ -3,13 +3,17 @@ package main
 import (
 	"context"
 	"log"
+	"os"
+	"strconv"
 	"time"
 
+	"github.com/joho/godotenv"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 )
 
 // Presigner encapsulates the Amazon Simple Storage Service (Amazon S3) presign actions
@@ -66,11 +70,67 @@ func (presigner Presigner) DeleteObject(bucketName string, objectKey string) (*v
 	return request, err
 }
 
-func main() {
+func s3client_init() {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	// Load the Shared AWS Configuration (~/.aws/config)
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
-	config.WithRegion("us-east-2"),
-	config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("accesskey", "privateid","")),	
+		config.WithRegion(os.Getenv("S3_REGION")),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(os.Getenv("S3_ACCESSKEY"), os.Getenv("S3_PRIVATEDID"), "")),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create an Amazon S3 service client
+	client := s3.NewFromConfig(cfg)
+	//presignClient := s3.NewPresignClient(client)
+	//presigner := Presigner{PresignClient: presignClient}
+
+	// Get the first page of results for ListObjectsV2 for a bucket
+	output, err := client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
+		Bucket: aws.String(os.Getenv("S3_BUCKET_NAME")),
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("first page results:")
+	for _, object := range output.Contents {
+		log.Printf("key=%s size=%d", aws.ToString(object.Key), object.Size)
+	}
+
+	// log.Printf("Let's presign a request to Get Presigned the object.")
+	// presignedGetRequest, err := presigner.GetObject("dolbyiohanedutech","input/0001.wav",60*30)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// log.Printf("Got a presigned %v request to URL:\n\t%v\n", presignedGetRequest.Method, presignedGetRequest.URL)
+
+	// log.Printf("Let's presign a request to Put Presigned the object.")
+	// presignedPutRequest, err := presigner.PutObject("dolbyiohanedutech","input/0001_out.wav",60*30)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// log.Printf("Got a presigned %v request to URL:\n\t%v\n", presignedPutRequest.Method, presignedPutRequest.URL)
+
+}
+
+func create_presignURL(num int) PresignURLs {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Load the Shared AWS Configuration (~/.aws/config)
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(os.Getenv("S3_REGION")),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(os.Getenv("S3_ACCESSKEY"), os.Getenv("S3_PRIVATEDID"), "")),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -81,33 +141,30 @@ func main() {
 	presignClient := s3.NewPresignClient(client)
 	presigner := Presigner{PresignClient: presignClient}
 
-	// Get the first page of results for ListObjectsV2 for a bucket
-	output, err := client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
-		Bucket: aws.String("bucketname"),
-	})
+	var urls []UrlData
 
-	if err != nil {
-		log.Fatal(err)
+	for i := 0; i < num; i++ {
+
+		log.Printf("Let's presign a request to Get Presigned the object.")
+		presignedGetRequest, err := presigner.GetObject(os.Getenv("S3_BUCKET_NAME"), "original/"+strconv.Itoa(i+1)+".wav", 60*30)
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("Got a presigned %v presignedGetRequest to URL:\n\t%v\n", presignedGetRequest.Method, presignedGetRequest.URL)
+		
+
+		log.Printf("Let's presign a request to Put Presigned the object.")
+		presignedPutRequest, err := presigner.PutObject(os.Getenv("S3_BUCKET_NAME"), "enhance/"+strconv.Itoa(i+1)+".wav", 60*30)
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("Got a presigned %v presignedPutRequest to URL:\n\t%v\n", presignedPutRequest.Method, presignedPutRequest.URL)
+		
+		url := UrlData{presignedGetRequest.URL,presignedPutRequest.URL}
+		urls= append(urls,url)
 	}
 
-	log.Println("first page results:")
-	for _, object := range output.Contents {
-		log.Printf("key=%s size=%d", aws.ToString(object.Key), object.Size)
-	}
+	presignurls := PresignURLs{Count:num,Urls:urls}
 
-
-	log.Printf("Let's presign a request to Get Presigned the object.")
-	presignedGetRequest, err := presigner.GetObject("dolbyiohanedutech","input/0001.wav",60*30)
-	if err != nil {
-		panic(err)
-	}
-	log.Printf("Got a presigned %v request to URL:\n\t%v\n", presignedGetRequest.Method, presignedGetRequest.URL)
-
-	log.Printf("Let's presign a request to Put Presigned the object.")
-	presignedPutRequest, err := presigner.PutObject("dolbyiohanedutech","input/0001_out.wav",60*30)
-	if err != nil {
-		panic(err)
-	}
-	log.Printf("Got a presigned %v request to URL:\n\t%v\n", presignedPutRequest.Method, presignedPutRequest.URL)
-
+	return presignurls
 }
