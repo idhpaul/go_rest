@@ -6,6 +6,10 @@ import (
 )
 
 
+type PresignUrlCount struct {
+	Count int 	`json:"count" binding:"required"`
+}
+
 type PresignURLs struct {
 	Count int    `json:"count"`
 	Urls  []UrlData `json:"urls"`
@@ -23,8 +27,10 @@ func setRouter(router *gin.Engine) {
 		print(c.Request.Header)
 		print(c.Request.Body)
 
-		
-		res := create_presignURL(8)
+		var requestBody PresignUrlCount
+		c.Bind(&requestBody)
+
+		res := create_presignURL(requestBody.Count)
 
 		c.JSON(http.StatusOK, res)
 	})
