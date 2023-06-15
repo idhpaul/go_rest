@@ -120,7 +120,7 @@ func s3client_init() {
 
 }
 
-func create_presignURL(num int) PresignURLs {
+func create_PreSignEnhance(num int) PreSignEnhance {
 
 	err := godotenv.Load()
 	if err != nil {
@@ -141,7 +141,7 @@ func create_presignURL(num int) PresignURLs {
 	presignClient := s3.NewPresignClient(client)
 	presigner := Presigner{PresignClient: presignClient}
 
-	var urls []UrlData
+	var urls []EnhanceUrls
 
 	for i := 0; i < num; i++ {
 
@@ -151,7 +151,6 @@ func create_presignURL(num int) PresignURLs {
 			panic(err)
 		}
 		log.Printf("Got a presigned %v presignedGetRequest to URL:\n\t%v\n", presignedGetRequest.Method, presignedGetRequest.URL)
-		
 
 		log.Printf("Let's presign a request to Put Presigned the object.")
 		presignedPutRequest, err := presigner.PutObject(os.Getenv("S3_BUCKET_NAME"), "enhance/"+strconv.Itoa(i+1)+".wav", 60*30)
@@ -159,12 +158,224 @@ func create_presignURL(num int) PresignURLs {
 			panic(err)
 		}
 		log.Printf("Got a presigned %v presignedPutRequest to URL:\n\t%v\n", presignedPutRequest.Method, presignedPutRequest.URL)
-		
-		url := UrlData{presignedGetRequest.URL,presignedPutRequest.URL}
-		urls= append(urls,url)
+
+		url := EnhanceUrls{presignedGetRequest.URL, presignedPutRequest.URL}
+		urls = append(urls, url)
 	}
 
-	presignurls := PresignURLs{Count:num,Urls:urls}
+	presignenhance := PreSignEnhance{Count: num, Urls: urls}
 
-	return presignurls
+	return presignenhance
+}
+
+func create_PreSignAnalyze(num int) PreSignAnalyze {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Load the Shared AWS Configuration (~/.aws/config)
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(os.Getenv("S3_REGION")),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(os.Getenv("S3_ACCESSKEY"), os.Getenv("S3_PRIVATEDID"), "")),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create an Amazon S3 service client
+	client := s3.NewFromConfig(cfg)
+	presignClient := s3.NewPresignClient(client)
+	presigner := Presigner{PresignClient: presignClient}
+
+	var urls []AnalyzeUrls
+
+	for i := 0; i < num; i++ {
+
+		log.Printf("Let's presign a request to Get Presigned the object.")
+		originalPresignedGetRequest, err := presigner.GetObject(os.Getenv("S3_BUCKET_NAME"), "original/"+strconv.Itoa(i+1)+".wav", 60*30)
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("Got a presigned %v originalPresignedGetRequest to URL:\n\t%v\n", originalPresignedGetRequest.Method, originalPresignedGetRequest.URL)
+
+		log.Printf("Let's presign a request to Put Presigned the object.")
+		originalPresignedPutRequest, err := presigner.PutObject(os.Getenv("S3_BUCKET_NAME"), "analyze/"+strconv.Itoa(i+1)+"_origin"+".json", 60*30)
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("Got a presigned %v presignedPutRequest to URL:\n\t%v\n", originalPresignedPutRequest.Method, originalPresignedPutRequest.URL)
+
+		log.Printf("Let's presign a request to Get Presigned the object.")
+		presignedGetRequest, err := presigner.GetObject(os.Getenv("S3_BUCKET_NAME"), "enhance/"+strconv.Itoa(i+1)+".wav", 60*30)
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("Got a presigned %v presignedGetRequest to URL:\n\t%v\n", presignedGetRequest.Method, presignedGetRequest.URL)
+
+		log.Printf("Let's presign a request to Put Presigned the object.")
+		presignedPutRequest, err := presigner.PutObject(os.Getenv("S3_BUCKET_NAME"), "analyze/"+strconv.Itoa(i+1)+".json", 60*30)
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("Got a presigned %v presignedPutRequest to URL:\n\t%v\n", presignedPutRequest.Method, presignedPutRequest.URL)
+
+		url := AnalyzeUrls{originalPresignedGetRequest.URL, originalPresignedPutRequest.URL, presignedGetRequest.URL, presignedPutRequest.URL}
+		urls = append(urls, url)
+	}
+
+	presignanalyzes := PreSignAnalyze{Count: num, UrlJsons: urls}
+
+	return presignanalyzes
+}
+
+func create_PreSignAnalyzeRetry(num int, retryCount int) PreSignAnalyze {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Load the Shared AWS Configuration (~/.aws/config)
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(os.Getenv("S3_REGION")),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(os.Getenv("S3_ACCESSKEY"), os.Getenv("S3_PRIVATEDID"), "")),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create an Amazon S3 service client
+	client := s3.NewFromConfig(cfg)
+	presignClient := s3.NewPresignClient(client)
+	presigner := Presigner{PresignClient: presignClient}
+
+	var urls []AnalyzeUrls
+
+	for i := 0; i < num; i++ {
+
+		log.Printf("Let's presign a request to Get Presigned the object.")
+		originalPresignedGetRequest, err := presigner.GetObject(os.Getenv("S3_BUCKET_NAME"), "original/"+strconv.Itoa(i+1)+".wav", 60*30)
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("Got a presigned %v originalPresignedGetRequest to URL:\n\t%v\n", originalPresignedGetRequest.Method, originalPresignedGetRequest.URL)
+
+		log.Printf("Let's presign a request to Put Presigned the object.")
+		originalPresignedPutRequest, err := presigner.PutObject(os.Getenv("S3_BUCKET_NAME"), "analyze/"+strconv.Itoa(i+1)+"_origin"+".json", 60*30)
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("Got a presigned %v presignedPutRequest to URL:\n\t%v\n", originalPresignedPutRequest.Method, originalPresignedPutRequest.URL)
+
+		log.Printf("Let's presign a request to Get Presigned the object.")
+		presignedGetRequest, err := presigner.GetObject(os.Getenv("S3_BUCKET_NAME"), "enhance/"+strconv.Itoa(i+1)+".wav", 60*30)
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("Got a presigned %v presignedGetRequest to URL:\n\t%v\n", presignedGetRequest.Method, presignedGetRequest.URL)
+
+		log.Printf("Let's presign a request to Put Presigned the object.")
+		presignedPutRequest, err := presigner.PutObject(os.Getenv("S3_BUCKET_NAME"), "analyze/"+strconv.Itoa(i+1)+".json", 60*30)
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("Got a presigned %v presignedPutRequest to URL:\n\t%v\n", presignedPutRequest.Method, presignedPutRequest.URL)
+
+		url := AnalyzeUrls{originalPresignedGetRequest.URL, originalPresignedPutRequest.URL, presignedGetRequest.URL, presignedPutRequest.URL}
+		urls = append(urls, url)
+	}
+
+	presignanalyzes := PreSignAnalyze{Count: num, UrlJsons: urls}
+
+	return presignanalyzes
+}
+
+func create_AnalyzeJson(idx int) AnalyzeJson {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Load the Shared AWS Configuration (~/.aws/config)
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(os.Getenv("S3_REGION")),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(os.Getenv("S3_ACCESSKEY"), os.Getenv("S3_PRIVATEDID"), "")),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create an Amazon S3 service client
+	client := s3.NewFromConfig(cfg)
+	presignClient := s3.NewPresignClient(client)
+	presigner := Presigner{PresignClient: presignClient}
+
+	log.Printf("Let's presign a request to Get Presigned the object.")
+	originalJsonGetRequest, err := presigner.GetObject(os.Getenv("S3_BUCKET_NAME"), "analyze/"+strconv.Itoa(idx+1)+"_origin"+".json", 60*30)
+	if err != nil {
+		panic(err)
+	}
+	log.Printf("Got a presigned %v presignedGetRequest to URL:\n\t%v\n", originalJsonGetRequest.Method, originalJsonGetRequest.URL)
+
+	log.Printf("Let's presign a request to Get Presigned the object.")
+	jsonGetRequest, err := presigner.GetObject(os.Getenv("S3_BUCKET_NAME"), "analyze/"+strconv.Itoa(idx+1)+".json", 60*30)
+	if err != nil {
+		panic(err)
+	}
+	log.Printf("Got a presigned %v presignedGetRequest to URL:\n\t%v\n", jsonGetRequest.Method, jsonGetRequest.URL)
+
+	analyzejson := AnalyzeJson{OriginalAnalyzeJsonData: originalJsonGetRequest.URL, AnalyzeJsonData: jsonGetRequest.URL}
+
+	return analyzejson
+}
+
+func create_PreSignEqualize(num int) PreSignEqualize {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Load the Shared AWS Configuration (~/.aws/config)
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(os.Getenv("S3_REGION")),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(os.Getenv("S3_ACCESSKEY"), os.Getenv("S3_PRIVATEDID"), "")),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create an Amazon S3 service client
+	client := s3.NewFromConfig(cfg)
+	presignClient := s3.NewPresignClient(client)
+	presigner := Presigner{PresignClient: presignClient}
+
+	var urls []EqualizeUrls
+
+	for i := 0; i < num; i++ {
+
+		log.Printf("Let's presign a request to Get Presigned the object.")
+		presignedGetRequest, err := presigner.GetObject(os.Getenv("S3_BUCKET_NAME"), "enhance/"+strconv.Itoa(i+1)+".wav", 60*30)
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("Got a presigned %v presignedGetRequest to URL:\n\t%v\n", presignedGetRequest.Method, presignedGetRequest.URL)
+
+		log.Printf("Let's presign a request to Put Presigned the object.")
+		presignedPutRequest, err := presigner.PutObject(os.Getenv("S3_BUCKET_NAME"), "equalize/"+strconv.Itoa(i+1)+".wav", 60*30)
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("Got a presigned %v presignedPutRequest to URL:\n\t%v\n", presignedPutRequest.Method, presignedPutRequest.URL)
+
+		url := EqualizeUrls{presignedGetRequest.URL, presignedPutRequest.URL}
+		urls = append(urls, url)
+	}
+
+	presignequalize := PreSignEqualize{Count: num, Urls: urls}
+
+	return presignequalize
 }
