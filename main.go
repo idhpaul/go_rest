@@ -55,7 +55,7 @@ type NeedEqualize struct {
 }
 
 type PreSignEqualize struct {
-	Count int           `json:"count"`
+	Count int            `json:"count"`
 	Urls  []EqualizeUrls `json:"urls"`
 }
 type EqualizeUrls struct {
@@ -133,6 +133,25 @@ func setRouter(router *gin.Engine) {
 		}
 
 		c.JSON(http.StatusOK, res)
+	})
+
+	router.GET("/testSTT", func(c *gin.Context) {
+
+		print(c.Request.Header)
+		print(c.Request.Body)
+
+		test_trnascribe()
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "ok",
+		})
+	})
+
+	router.GET("/ping", func(c *gin.Context) {
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "pong",
+		})
 	})
 }
 
