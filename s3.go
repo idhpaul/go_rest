@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"io"
 	"log"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/tidwall/gjson"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
@@ -103,21 +105,6 @@ func s3client_init() {
 	for _, object := range output.Contents {
 		log.Printf("key=%s size=%d", aws.ToString(object.Key), object.Size)
 	}
-
-	// log.Printf("Let's presign a request to Get Presigned the object.")
-	// presignedGetRequest, err := presigner.GetObject("dolbyiohanedutech","input/0001.wav",60*30)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// log.Printf("Got a presigned %v request to URL:\n\t%v\n", presignedGetRequest.Method, presignedGetRequest.URL)
-
-	// log.Printf("Let's presign a request to Put Presigned the object.")
-	// presignedPutRequest, err := presigner.PutObject("dolbyiohanedutech","input/0001_out.wav",60*30)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// log.Printf("Got a presigned %v request to URL:\n\t%v\n", presignedPutRequest.Method, presignedPutRequest.URL)
-
 }
 
 func create_PreSignEnhance(num int) PreSignEnhance {
@@ -378,4 +365,44 @@ func create_PreSignEqualize(num int) PreSignEqualize {
 	presignequalize := PreSignEqualize{Count: num, Urls: urls}
 
 	return presignequalize
+}
+
+func get_TranscribeOutputJson(bucketName string, objectKey string) string {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Load the Shared AWS Configuration (~/.aws/config)
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(os.Getenv("S3_REGION")),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(os.Getenv("S3_ACCESSKEY"), os.Getenv("S3_PRIVATEDID"), "")),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client := s3.NewFromConfig(cfg)
+
+	result, err := client.GetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(objectKey),
+	})
+	if err != nil {
+		log.Printf("Couldn't get object %v:%v. Here's why: %v\n", bucketName, objectKey, err)
+		//return err
+	}
+	defer result.Body.Close()
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		log.Printf("Couldn't read object body from %v. Here's why: %v\n", objectKey, err)
+	}
+	myString := string(body[:])
+	log.Printf(myString)
+
+	value := gjson.Get(myString, "results.transcripts.0.transcript")
+	println(value.String())
+
+	return value.String()
 }

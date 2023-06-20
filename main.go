@@ -140,11 +140,9 @@ func setRouter(router *gin.Engine) {
 		print(c.Request.Header)
 		print(c.Request.Body)
 
-		test_trnascribe()
+		var jsondata = create_trnascribe()
 
-		c.JSON(http.StatusOK, gin.H{
-			"message": "ok",
-		})
+		c.JSON(http.StatusOK, jsondata)
 	})
 
 	router.GET("/ping", func(c *gin.Context) {

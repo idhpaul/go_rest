@@ -10,11 +10,11 @@ package main
 // 예제
 // https://github.com/aws-samples/cross-aws-sdk-workshop/blob/31eed8668ae573862fe9422184501170ad25d16d/lambda/go/start-transcription/main.go
 
-
 import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 
@@ -25,7 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/transcribe/types"
 )
 
-func test_trnascribe()  {
+func create_trnascribe() string {
 
 	err := godotenv.Load()
 	if err != nil {
@@ -46,12 +46,16 @@ func test_trnascribe()  {
 	job := tr.StartTranscriptionJobInput{
 		TranscriptionJobName: aws.String("dolbywav2text"),
 		Media: &types.Media{
-			MediaFileUri: aws.String("s3://~~~~/10.wav"),
+			MediaFileUri: aws.String("s3://dolbyio/equalize/10.wav"),
 		},
 		MediaFormat: "wav",
 		LanguageCode: "ko-KR",
-		//OutputBucketName: aws.String("~~"),
-		//OutputKey: aws.String("~~"),
+
+		// https://docs.aws.amazon.com/ko_kr/AmazonS3/latest/userguide/access-bucket-intro.html
+		// https://s3.us-east-2.amazonaws.com/{OutputBucketName}/{OutputKey}
+		// https://docs.aws.amazon.com/transcribe/latest/APIReference/API_StartTranscriptionJob.html#transcribe-StartTranscriptionJob-request-OutputBucketName
+		OutputBucketName: aws.String("dolbyio"),
+		OutputKey: aws.String("stt/10.json"),
 	}
 
 	// start the transcription job
@@ -61,4 +65,15 @@ func test_trnascribe()  {
 	}
 	log.Println("transcription started,", resp)
 
+	time.Sleep(30 * time.Second)
+
+	outputJob, err := client.GetTranscriptionJob(context.TODO(),&tr.GetTranscriptionJobInput{
+		TranscriptionJobName: aws.String("dolbywav2text"),
+	})
+	if err != nil {
+		log.Printf("Failed StartTranscriptionJob. err: %v\n", err)
+	}
+	log.Println("transcription started,", outputJob.TranscriptionJob.Transcript.TranscriptFileUri)
+
+	return get_TranscribeOutputJson("dolbyio","stt/10.json")
 }
