@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -367,7 +368,7 @@ func create_PreSignEqualize(num int) PreSignEqualize {
 	return presignequalize
 }
 
-func get_TranscribeOutputJson(bucketName string, objectKey string) string {
+func cleanup_TranscribeData(idx int, objectKey string) {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
@@ -385,12 +386,14 @@ func get_TranscribeOutputJson(bucketName string, objectKey string) string {
 	client := s3.NewFromConfig(cfg)
 
 	result, err := client.GetObject(context.TODO(), &s3.GetObjectInput{
-		Bucket: aws.String(bucketName),
+		Bucket: aws.String(os.Getenv("S3_BUCKET_NAME")),
 		Key:    aws.String(objectKey),
 	})
 	if err != nil {
-		log.Printf("Couldn't get object %v:%v. Here's why: %v\n", bucketName, objectKey, err)
+		log.Printf("Couldn't get object %v. Here's why: %v\n", objectKey, err)
 		//return err
+	}else{
+		log.Printf("Get Object successful(%v)\n",objectKey);
 	}
 	defer result.Body.Close()
 
@@ -399,10 +402,31 @@ func get_TranscribeOutputJson(bucketName string, objectKey string) string {
 		log.Printf("Couldn't read object body from %v. Here's why: %v\n", objectKey, err)
 	}
 	myString := string(body[:])
-	log.Printf(myString)
+	//log.Printf(myString)
 
 	value := gjson.Get(myString, "results.transcripts.0.transcript")
 	println(value.String())
 
-	return value.String()
+	// make $index.txt
+	var bodydata = strings.NewReader(value.String())
+
+	_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket: aws.String(os.Getenv("S3_BUCKET_NAME")),
+		Key:    aws.String("stt/"+strconv.Itoa(idx+1)+".txt"),
+		Body:   bodydata,
+	})
+	if err != nil {
+		log.Printf("Couldn't upload file %v. Here's why: %v\n",objectKey, err)
+	}else{
+		log.Printf("Put Object successful(%v)\n","stt/"+strconv.Itoa(idx+1)+".txt");
+	}
+
+	// delete $index.json
+	client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+		Bucket: aws.String(os.Getenv("S3_BUCKET_NAME")),
+		Key: aws.String(objectKey),
+	})
+	if err != nil {
+		log.Printf("Couldn't delete objects from bucket %v. Here's why: %v\n", objectKey, err)
+	}
 }

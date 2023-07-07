@@ -63,6 +63,14 @@ type EqualizeUrls struct {
 	Output string `json:"output"`
 }
 
+// //////////////////////////
+type NeedSTT struct {
+	Index int `json:"index"`
+}
+type STTStatus struct {
+	Result string `json:"result"`
+}
+
 func setRouter(router *gin.Engine) {
 
 	router.POST("/presignEnhance", func(c *gin.Context) {
@@ -135,12 +143,54 @@ func setRouter(router *gin.Engine) {
 		c.JSON(http.StatusOK, res)
 	})
 
-	router.GET("/testSTT", func(c *gin.Context) {
+	router.POST("/startStt", func(c *gin.Context) {
 
 		print(c.Request.Header)
 		print(c.Request.Body)
 
-		var jsondata = create_trnascribe()
+		var requestBody NeedSTT
+		c.Bind(&requestBody)
+
+		var jsondata = create_transcribe(requestBody.Index)
+
+		c.JSON(http.StatusOK, jsondata)
+	})
+
+	router.POST("/getStt", func(c *gin.Context) {
+
+		print(c.Request.Header)
+		print(c.Request.Body)
+
+		var requestBody NeedSTT
+		c.Bind(&requestBody)
+
+		var jsondata = get_transcribe(requestBody.Index)
+
+		c.JSON(http.StatusOK, jsondata)
+	})
+
+	router.POST("/cleanupStt", func(c *gin.Context) {
+
+		print(c.Request.Header)
+		print(c.Request.Body)
+
+		var requestBody NeedSTT
+		c.Bind(&requestBody)
+
+		cleanup_transcribe(requestBody.Index)
+
+		c.Done()
+	})
+
+	router.POST("/testDeleteSTT", func(c *gin.Context) {
+
+		print(c.Request.Header)
+		print(c.Request.Body)
+
+		var requestBody NeedSTT
+		c.Bind(&requestBody)
+
+		var jsondata = delete_trnascribe(requestBody.Index)
 
 		c.JSON(http.StatusOK, jsondata)
 	})
@@ -154,7 +204,9 @@ func setRouter(router *gin.Engine) {
 }
 
 func main() {
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
+
 	setRouter(router)
 	_ = router.Run(":8080")
 }
