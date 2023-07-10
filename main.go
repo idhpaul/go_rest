@@ -68,7 +68,9 @@ type NeedSTT struct {
 	Index int `json:"index"`
 }
 type STTStatus struct {
-	Result string `json:"result"`
+	Result1 string `json:"result1"`
+	Result2 string `json:"result2"`
+
 }
 
 func setRouter(router *gin.Engine) {

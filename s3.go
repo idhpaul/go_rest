@@ -387,7 +387,7 @@ func cleanup_TranscribeData(idx int, objectKey string) {
 
 	result, err := client.GetObject(context.TODO(), &s3.GetObjectInput{
 		Bucket: aws.String(os.Getenv("S3_BUCKET_NAME")),
-		Key:    aws.String(objectKey),
+		Key:    aws.String(objectKey+".json"),
 	})
 	if err != nil {
 		log.Printf("Couldn't get object %v. Here's why: %v\n", objectKey, err)
@@ -412,19 +412,19 @@ func cleanup_TranscribeData(idx int, objectKey string) {
 
 	_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket: aws.String(os.Getenv("S3_BUCKET_NAME")),
-		Key:    aws.String("stt/"+strconv.Itoa(idx+1)+".txt"),
+		Key:    aws.String(objectKey+".txt"),
 		Body:   bodydata,
 	})
 	if err != nil {
 		log.Printf("Couldn't upload file %v. Here's why: %v\n",objectKey, err)
 	}else{
-		log.Printf("Put Object successful(%v)\n","stt/"+strconv.Itoa(idx+1)+".txt");
+		log.Printf("Put Object successful(%v)\n",objectKey+".txt");
 	}
 
 	// delete $index.json
 	client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
 		Bucket: aws.String(os.Getenv("S3_BUCKET_NAME")),
-		Key: aws.String(objectKey),
+		Key: aws.String(objectKey+".json"),
 	})
 	if err != nil {
 		log.Printf("Couldn't delete objects from bucket %v. Here's why: %v\n", objectKey, err)
