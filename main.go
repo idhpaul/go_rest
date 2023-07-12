@@ -66,19 +66,18 @@ type EqualizeUrls struct {
 // //////////////////////////
 type NeedSTT struct {
 	Index int `json:"index"`
+	IsOriginal bool `json:"isOriginal"`
 }
 type STTStatus struct {
-	Result1 string `json:"result1"`
-	Result2 string `json:"result2"`
-
+	Result string `json:"result"`
 }
 
 func setRouter(router *gin.Engine) {
 
 	router.POST("/presignEnhance", func(c *gin.Context) {
 
-		print(c.Request.Header)
-		print(c.Request.Body)
+		//print(c.Request.Header)
+		//print(c.Request.Body)
 
 		var requestBody NeedEnhance
 		c.Bind(&requestBody)
@@ -90,8 +89,8 @@ func setRouter(router *gin.Engine) {
 
 	router.POST("/presignAnalyze", func(c *gin.Context) {
 
-		print(c.Request.Header)
-		print(c.Request.Body)
+		//print(c.Request.Header)
+		//print(c.Request.Body)
 
 		var requestBody NeedAnalyze
 		c.Bind(&requestBody)
@@ -109,8 +108,8 @@ func setRouter(router *gin.Engine) {
 
 	router.POST("/getAnalyzeJson", func(c *gin.Context) {
 
-		print(c.Request.Header)
-		print(c.Request.Body)
+		//print(c.Request.Header)
+		//print(c.Request.Body)
 
 		var requestBody NeedAnalyzeJson
 		c.Bind(&requestBody)
@@ -128,8 +127,8 @@ func setRouter(router *gin.Engine) {
 
 	router.POST("/presignEqualize", func(c *gin.Context) {
 
-		print(c.Request.Header)
-		print(c.Request.Body)
+		//print(c.Request.Header)
+		//print(c.Request.Body)
 
 		var requestBody NeedEqualize
 		c.Bind(&requestBody)
@@ -147,52 +146,52 @@ func setRouter(router *gin.Engine) {
 
 	router.POST("/startStt", func(c *gin.Context) {
 
-		print(c.Request.Header)
-		print(c.Request.Body)
+		//print(c.Request.Header)
+		//print(c.Request.Body)
 
 		var requestBody NeedSTT
 		c.Bind(&requestBody)
 
-		var jsondata = create_transcribe(requestBody.Index)
+		var jsondata = create_transcribe(requestBody.Index, requestBody.IsOriginal)
 
 		c.JSON(http.StatusOK, jsondata)
 	})
 
 	router.POST("/getStt", func(c *gin.Context) {
 
-		print(c.Request.Header)
-		print(c.Request.Body)
+		//print(c.Request.Header)
+		//print(c.Request.Body)
 
 		var requestBody NeedSTT
 		c.Bind(&requestBody)
 
-		var jsondata = get_transcribe(requestBody.Index)
+		var jsondata = get_transcribe(requestBody.Index, requestBody.IsOriginal)
 
 		c.JSON(http.StatusOK, jsondata)
 	})
 
-	router.POST("/cleanupStt", func(c *gin.Context) {
+	// router.POST("/cleanupStt", func(c *gin.Context) {
 
-		print(c.Request.Header)
-		print(c.Request.Body)
+	// 	//print(c.Request.Header)
+	// 	//print(c.Request.Body)
+
+	// 	var requestBody NeedSTT
+	// 	c.Bind(&requestBody)
+
+	// 	cleanup_transcribe(requestBody.Index)
+
+	// 	c.Done()
+	// })
+
+	router.POST("/cleanUpSTT", func(c *gin.Context) {
+
+		//print(c.Request.Header)
+		//print(c.Request.Body)
 
 		var requestBody NeedSTT
 		c.Bind(&requestBody)
 
-		cleanup_transcribe(requestBody.Index)
-
-		c.Done()
-	})
-
-	router.POST("/testDeleteSTT", func(c *gin.Context) {
-
-		print(c.Request.Header)
-		print(c.Request.Body)
-
-		var requestBody NeedSTT
-		c.Bind(&requestBody)
-
-		var jsondata = delete_trnascribe(requestBody.Index)
+		var jsondata = delete_trnascribe(requestBody.Index, requestBody.IsOriginal)
 
 		c.JSON(http.StatusOK, jsondata)
 	})

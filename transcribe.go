@@ -26,7 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/transcribe/types"
 )
 
-func create_transcribe(idx int) STTStatus {
+func create_transcribe(idx int, isOriginal bool) STTStatus {
 
 	err := godotenv.Load()
 	if err != nil {
@@ -46,72 +46,74 @@ func create_transcribe(idx int) STTStatus {
 
 	var sttResult STTStatus
 
-	job := tr.StartTranscriptionJobInput{
-		TranscriptionJobName: aws.String("dolbyEqualizeStt_" + strconv.Itoa(idx+1)),
-		Media: &types.Media{
-			MediaFileUri: aws.String("s3://" + os.Getenv("S3_BUCKET_NAME") + "/equalize/" + strconv.Itoa(idx+1) + ".wav"),
-		},
-		MediaFormat:  "wav",
-		LanguageCode: "ko-KR",
-
-		// OutputKey 의 subtitles 파일명 영향 받음
-		// Subtitles: &types.Subtitles{
-		// 	Formats: []types.SubtitleFormat{types.SubtitleFormatVtt},
-		// 	OutputStartIndex: aws.Int32(0),
-		// },
-
-		// https://docs.aws.amazon.com/ko_kr/AmazonS3/latest/userguide/access-bucket-intro.html
-		// https://s3.us-east-2.amazonaws.com/{OutputBucketName}/{OutputKey}
-		// https://docs.aws.amazon.com/transcribe/latest/APIReference/API_StartTranscriptionJob.html#transcribe-StartTranscriptionJob-request-OutputBucketName
-		OutputBucketName: aws.String(os.Getenv("S3_BUCKET_NAME")),
-		OutputKey:        aws.String("stt/" + strconv.Itoa(idx+1) + ".json"),
-	}
-
-	// start the transcription job
-	resp, err := client.StartTranscriptionJob(context.TODO(), &job)
-	if err != nil {
-		log.Printf("Failed StartTranscriptionJob. err: %v\n", err)
-		sttResult.Result1 = err.Error()
+	if isOriginal {
+		jobOriginal := tr.StartTranscriptionJobInput{
+			TranscriptionJobName: aws.String("dolbyEqualizeStt_" + strconv.Itoa(idx+1) + "_original"),
+			Media: &types.Media{
+				MediaFileUri: aws.String("s3://" + os.Getenv("S3_BUCKET_NAME") + "/original/" + strconv.Itoa(idx+1) + ".wav"),
+			},
+			MediaFormat:  "wav",
+			LanguageCode: "ko-KR",
+	
+			// OutputKey 의 subtitles 파일명 영향 받음
+			// Subtitles: &types.Subtitles{
+			// 	Formats: []types.SubtitleFormat{types.SubtitleFormatVtt},
+			// 	OutputStartIndex: aws.Int32(0),
+			// },
+	
+			// https://docs.aws.amazon.com/ko_kr/AmazonS3/latest/userguide/access-bucket-intro.html
+			// https://s3.us-east-2.amazonaws.com/{OutputBucketName}/{OutputKey}
+			// https://docs.aws.amazon.com/transcribe/latest/APIReference/API_StartTranscriptionJob.html#transcribe-StartTranscriptionJob-request-OutputBucketName
+			OutputBucketName: aws.String(os.Getenv("S3_BUCKET_NAME")),
+			OutputKey:        aws.String("stt_original/" + strconv.Itoa(idx+1) + ".json"),
+		}
+	
+		// start the transcription job
+		respOriginal, err := client.StartTranscriptionJob(context.TODO(), &jobOriginal)
+		if err != nil {
+			log.Printf("Failed StartTranscriptionJob_original. err: %v\n", err)
+			sttResult.Result = err.Error()
+		} else {
+			log.Println("Transcription_original started,", respOriginal)
+			sttResult.Result = "Transcription_original started"
+		}
 	} else {
-		log.Println("Transcription started,", resp)
-		sttResult.Result1 = "Transcription started"
-	}
-
-	jobOriginal := tr.StartTranscriptionJobInput{
-		TranscriptionJobName: aws.String("dolbyEqualizeStt_" + strconv.Itoa(idx+1) + "_original"),
-		Media: &types.Media{
-			MediaFileUri: aws.String("s3://" + os.Getenv("S3_BUCKET_NAME") + "/original/" + strconv.Itoa(idx+1) + ".wav"),
-		},
-		MediaFormat:  "wav",
-		LanguageCode: "ko-KR",
-
-		// OutputKey 의 subtitles 파일명 영향 받음
-		// Subtitles: &types.Subtitles{
-		// 	Formats: []types.SubtitleFormat{types.SubtitleFormatVtt},
-		// 	OutputStartIndex: aws.Int32(0),
-		// },
-
-		// https://docs.aws.amazon.com/ko_kr/AmazonS3/latest/userguide/access-bucket-intro.html
-		// https://s3.us-east-2.amazonaws.com/{OutputBucketName}/{OutputKey}
-		// https://docs.aws.amazon.com/transcribe/latest/APIReference/API_StartTranscriptionJob.html#transcribe-StartTranscriptionJob-request-OutputBucketName
-		OutputBucketName: aws.String(os.Getenv("S3_BUCKET_NAME")),
-		OutputKey:        aws.String("stt_original/" + strconv.Itoa(idx+1) + ".json"),
-	}
-
-	// start the transcription job
-	respOriginal, err := client.StartTranscriptionJob(context.TODO(), &jobOriginal)
-	if err != nil {
-		log.Printf("Failed StartTranscriptionJob_original. err: %v\n", err)
-		sttResult.Result2 = err.Error()
-	} else {
-		log.Println("Transcription_original started,", respOriginal)
-		sttResult.Result2 = "Transcription started"
+		job := tr.StartTranscriptionJobInput{
+			TranscriptionJobName: aws.String("dolbyEqualizeStt_" + strconv.Itoa(idx+1)),
+			Media: &types.Media{
+				MediaFileUri: aws.String("s3://" + os.Getenv("S3_BUCKET_NAME") + "/equalize/" + strconv.Itoa(idx+1) + ".wav"),
+			},
+			MediaFormat:  "wav",
+			LanguageCode: "ko-KR",
+	
+			// OutputKey 의 subtitles 파일명 영향 받음
+			// Subtitles: &types.Subtitles{
+			// 	Formats: []types.SubtitleFormat{types.SubtitleFormatVtt},
+			// 	OutputStartIndex: aws.Int32(0),
+			// },
+	
+			// https://docs.aws.amazon.com/ko_kr/AmazonS3/latest/userguide/access-bucket-intro.html
+			// https://s3.us-east-2.amazonaws.com/{OutputBucketName}/{OutputKey}
+			// https://docs.aws.amazon.com/transcribe/latest/APIReference/API_StartTranscriptionJob.html#transcribe-StartTranscriptionJob-request-OutputBucketName
+			OutputBucketName: aws.String(os.Getenv("S3_BUCKET_NAME")),
+			OutputKey:        aws.String("stt/" + strconv.Itoa(idx+1) + ".json"),
+		}
+	
+		// start the transcription job
+		resp, err := client.StartTranscriptionJob(context.TODO(), &job)
+		if err != nil {
+			log.Printf("Failed StartTranscriptionJob. err: %v\n", err)
+			sttResult.Result = err.Error()
+		} else {
+			log.Println("Transcription started,", resp)
+			sttResult.Result = "Transcription started"
+		}
 	}
 
 	return sttResult
 }
 
-func get_transcribe(idx int) STTStatus {
+func get_transcribe(idx int, isOriginal bool) STTStatus {
 
 	err := godotenv.Load()
 	if err != nil {
@@ -130,24 +132,26 @@ func get_transcribe(idx int) STTStatus {
 	client := tr.NewFromConfig(cfg)
 	var sttResult STTStatus
 
-	outputJob, err := client.GetTranscriptionJob(context.TODO(), &tr.GetTranscriptionJobInput{
-		TranscriptionJobName: aws.String("dolbyEqualizeStt_" + strconv.Itoa(idx+1)),
-	})
-	if err != nil {
-		log.Printf("Failed GetTranscriptionJob. err: %v\n", err)
-		sttResult.Result1 = err.Error()
-	} else {
-		sttResult.Result1 = string(outputJob.TranscriptionJob.TranscriptionJobStatus)
-	}
-
-	outputJobOriginal, err := client.GetTranscriptionJob(context.TODO(), &tr.GetTranscriptionJobInput{
-		TranscriptionJobName: aws.String("dolbyEqualizeStt_" + strconv.Itoa(idx+1) + "_original"),
-	})
-	if err != nil {
-		log.Printf("Failed GetTranscriptionJob_original. err: %v\n", err)
-		sttResult.Result2 = err.Error()
-	} else {
-		sttResult.Result2 = string(outputJobOriginal.TranscriptionJob.TranscriptionJobStatus)
+	if isOriginal {
+		outputJobOriginal, err := client.GetTranscriptionJob(context.TODO(), &tr.GetTranscriptionJobInput{
+			TranscriptionJobName: aws.String("dolbyEqualizeStt_" + strconv.Itoa(idx+1) + "_original"),
+		})
+		if err != nil {
+			log.Printf("Failed GetTranscriptionJob_original. err: %v\n", err)
+			sttResult.Result = err.Error()
+		} else {
+			sttResult.Result = string(outputJobOriginal.TranscriptionJob.TranscriptionJobStatus)
+		}
+	}else {
+		outputJob, err := client.GetTranscriptionJob(context.TODO(), &tr.GetTranscriptionJobInput{
+			TranscriptionJobName: aws.String("dolbyEqualizeStt_" + strconv.Itoa(idx+1)),
+		})
+		if err != nil {
+			log.Printf("Failed GetTranscriptionJob. err: %v\n", err)
+			sttResult.Result = err.Error()
+		} else {
+			sttResult.Result = string(outputJob.TranscriptionJob.TranscriptionJobStatus)
+		}
 	}
 
 	return sttResult
@@ -177,33 +181,33 @@ func cleanup_transcribe(idx int) STTStatus {
 	})
 	if err != nil {
 		log.Printf("Failed DeleteTranscriptionJob. err: %v\n", err)
-		sttResult.Result1 = err.Error()
+		sttResult.Result = err.Error()
 	} else {
 		log.Println("delete transcription,", deloutput)
 
 		cleanup_TranscribeData(idx, "stt/"+strconv.Itoa(idx+1)+".json")
 
-		sttResult.Result1 = "cleanup done"
+		sttResult.Result = "cleanup done"
 	}
 
 	deloutputOriginal, err := client.DeleteTranscriptionJob(context.TODO(), &tr.DeleteTranscriptionJobInput{
-		TranscriptionJobName: aws.String("dolbyEqualizeStt_" + strconv.Itoa(idx+1)+"_original"),
+		TranscriptionJobName: aws.String("dolbyEqualizeStt_" + strconv.Itoa(idx+1) + "_original"),
 	})
 	if err != nil {
 		log.Printf("Failed DeleteTranscriptionJob_original. err: %v\n", err)
-		sttResult.Result2 = err.Error()
+		sttResult.Result = err.Error()
 	} else {
 		log.Println("delete transcription_original,", deloutputOriginal)
 
 		cleanup_TranscribeData(idx, "stt_original/"+strconv.Itoa(idx+1)+".json")
 
-		sttResult.Result2 = "original cleanup done"
+		sttResult.Result = "original cleanup done"
 	}
 
 	return sttResult
 }
 
-func delete_trnascribe(num int) string {
+func delete_trnascribe(num int, isOriginal bool) string {
 
 	err := godotenv.Load()
 	if err != nil {
@@ -221,27 +225,38 @@ func delete_trnascribe(num int) string {
 
 	client := tr.NewFromConfig(cfg)
 
-	for i := 0; i < num; i++ {
-		deloutput, err := client.DeleteTranscriptionJob(context.TODO(), &tr.DeleteTranscriptionJobInput{
-			TranscriptionJobName: aws.String("dolbyEqualizeStt_" + strconv.Itoa(i+1)),
-		})
-		if err != nil {
-			log.Printf("Failed DeleteTranscriptionJob(idx : %v). err: %v\n", i, err)
-		}
-		log.Println("delete transcription,", deloutput)
+	if isOriginal {
 
-		deloutputOriginal, err := client.DeleteTranscriptionJob(context.TODO(), &tr.DeleteTranscriptionJobInput{
-			TranscriptionJobName: aws.String("dolbyEqualizeStt_" + strconv.Itoa(i+1)+"_original"),
-		})
-		if err != nil {
-			log.Printf("Failed DeleteTranscriptionJob_original(idx : %v). err: %v\n", i, err)
+		for i := 0; i < num; i++ {
+	
+			deloutputOriginal, err := client.DeleteTranscriptionJob(context.TODO(), &tr.DeleteTranscriptionJobInput{
+				TranscriptionJobName: aws.String("dolbyEqualizeStt_" + strconv.Itoa(i+1) + "_original"),
+			})
+			if err != nil {
+				log.Printf("Failed DeleteTranscriptionJob_original(idx : %v). err: %v\n", i, err)
+			}
+			log.Println("delete transcription original,", deloutputOriginal)
 		}
-		log.Println("delete transcription original,", deloutputOriginal)
-	}
 
-	for i := 0; i < num; i++ {
-		cleanup_TranscribeData(i, "stt/"+strconv.Itoa(i+1))
-		cleanup_TranscribeData(i, "stt_original/"+strconv.Itoa(i+1))
+		for i := 0; i < num; i++ {
+			cleanup_TranscribeData(i, "stt_original/"+strconv.Itoa(i+1))
+		}
+
+	} else {
+		for i := 0; i < num; i++ {
+			deloutput, err := client.DeleteTranscriptionJob(context.TODO(), &tr.DeleteTranscriptionJobInput{
+				TranscriptionJobName: aws.String("dolbyEqualizeStt_" + strconv.Itoa(i+1)),
+			})
+			if err != nil {
+				log.Printf("Failed DeleteTranscriptionJob(idx : %v). err: %v\n", i, err)
+			}
+			log.Println("delete transcription,", deloutput)
+
+		}
+
+		for i := 0; i < num; i++ {
+			cleanup_TranscribeData(i, "stt/"+strconv.Itoa(i+1))
+		}
 	}
 
 	return "delete ok"
