@@ -65,11 +65,17 @@ type EqualizeUrls struct {
 
 // //////////////////////////
 type NeedSTT struct {
-	Index int `json:"index"`
+	Index      int  `json:"index"`
 	IsOriginal bool `json:"isOriginal"`
 }
 type STTStatus struct {
 	Result string `json:"result"`
+}
+
+// //////////////////////////
+type UploadExcel struct {
+	FileName string `json:"fileName"`
+	FileData string `json:"fileData"`
 }
 
 func setRouter(router *gin.Engine) {
@@ -170,19 +176,6 @@ func setRouter(router *gin.Engine) {
 		c.JSON(http.StatusOK, jsondata)
 	})
 
-	// router.POST("/cleanupStt", func(c *gin.Context) {
-
-	// 	//print(c.Request.Header)
-	// 	//print(c.Request.Body)
-
-	// 	var requestBody NeedSTT
-	// 	c.Bind(&requestBody)
-
-	// 	cleanup_transcribe(requestBody.Index)
-
-	// 	c.Done()
-	// })
-
 	router.POST("/cleanUpSTT", func(c *gin.Context) {
 
 		//print(c.Request.Header)
@@ -191,9 +184,32 @@ func setRouter(router *gin.Engine) {
 		var requestBody NeedSTT
 		c.Bind(&requestBody)
 
-		var jsondata = delete_trnascribe(requestBody.Index, requestBody.IsOriginal)
+		var jsondata = delete_transcribe(requestBody.Index, requestBody.IsOriginal)
 
 		c.JSON(http.StatusOK, jsondata)
+	})
+
+	router.POST("/test_cleanup", func(c *gin.Context) {
+
+		//print(c.Request.Header)
+		//print(c.Request.Body)
+
+		var requestBody NeedSTT
+		c.Bind(&requestBody)
+
+		test_delete_all(requestBody.Index,requestBody.IsOriginal)
+
+		c.Done()
+	})
+
+	router.POST("/uploadExcel", func(c *gin.Context) {
+
+		var requestBody UploadExcel
+		c.Bind(&requestBody)
+
+		upload_excel(requestBody.FileName, requestBody.FileData)
+
+		c.JSON(http.StatusOK, "Excel upload ok")
 	})
 
 	router.GET("/ping", func(c *gin.Context) {
@@ -205,7 +221,7 @@ func setRouter(router *gin.Engine) {
 }
 
 func main() {
-	gin.SetMode(gin.ReleaseMode)
+	//gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 
 	setRouter(router)

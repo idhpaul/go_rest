@@ -301,7 +301,6 @@ func create_AnalyzeJson(idx int) AnalyzeJson {
 	presignClient := s3.NewPresignClient(client)
 	presigner := Presigner{PresignClient: presignClient}
 
-	log.Printf("Let's presign a request to Get Presigned the object.")
 	originalJsonGetRequest, err := presigner.GetObject(os.Getenv("S3_BUCKET_NAME"), "analyze/"+strconv.Itoa(idx+1)+"_origin"+".json", 60*30)
 	if err != nil {
 		panic(err)
@@ -405,7 +404,7 @@ func cleanup_TranscribeData(idx int, objectKey string) {
 	//log.Printf(myString)
 
 	value := gjson.Get(myString, "results.transcripts.0.transcript")
-	println(value.String())
+	//println(value.String())
 
 	// make $index.txt
 	var bodydata = strings.NewReader(value.String())
@@ -429,4 +428,38 @@ func cleanup_TranscribeData(idx int, objectKey string) {
 	if err != nil {
 		log.Printf("Couldn't delete objects from bucket %v. Here's why: %v\n", objectKey, err)
 	}
+}
+
+
+func upload_excel(fileName string, data string) {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Load the Shared AWS Configuration (~/.aws/config)
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(os.Getenv("S3_REGION")),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(os.Getenv("S3_ACCESSKEY"), os.Getenv("S3_PRIVATEDID"), "")),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client := s3.NewFromConfig(cfg)
+
+	// make $index.txt
+	var bodydata = strings.NewReader(data)
+
+	_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket: aws.String(os.Getenv("S3_BUCKET_NAME")),
+		Key:    aws.String(fileName),
+		Body:   bodydata,
+	})
+	if err != nil {
+		log.Printf("Couldn't upload file %v. Here's why: %v\n",fileName, err)
+	}else{
+		log.Printf("Put Object successful(%v)\n",fileName);
+	}
+
 }
