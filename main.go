@@ -204,10 +204,11 @@ func setRouter(router *gin.Engine) {
 
 	router.POST("/uploadExcel", func(c *gin.Context) {
 
-		var requestBody UploadExcel
-		c.Bind(&requestBody)
+		print(c.Request)
+		form, _ := c.MultipartForm()
+		files := form.File["excelfile"]
 
-		upload_excel(requestBody.FileName, requestBody.FileData)
+		upload_excel(files)
 
 		c.JSON(http.StatusOK, "Excel upload ok")
 	})

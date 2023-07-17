@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log"
+	"mime/multipart"
 	"os"
 	"strconv"
 	"strings"
@@ -431,7 +432,7 @@ func cleanup_TranscribeData(idx int, objectKey string) {
 }
 
 
-func upload_excel(fileName string, data string) {
+func upload_excel(data []*multipart.FileHeader) {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
@@ -448,18 +449,21 @@ func upload_excel(fileName string, data string) {
 
 	client := s3.NewFromConfig(cfg)
 
-	// make $index.txt
-	var bodydata = strings.NewReader(data)
+	csvFileToImport, err := data[0].Open()
+	if err != nil {
+        //log.Printf("Couldn't upload file %v. Here's why: %v\n",fileName, err)
+    }
+	defer csvFileToImport.Close()
 
 	_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket: aws.String(os.Getenv("S3_BUCKET_NAME")),
-		Key:    aws.String(fileName),
-		Body:   bodydata,
+		Key:    aws.String(data[0].Filename),
+		Body: csvFileToImport,
 	})
 	if err != nil {
-		log.Printf("Couldn't upload file %v. Here's why: %v\n",fileName, err)
+		//log.Printf("Couldn't upload file %v. Here's why: %v\n",fileName, err)
 	}else{
-		log.Printf("Put Object successful(%v)\n",fileName);
+		//log.Printf("Put Object successful(%v)\n",fileName);
 	}
 
 }
