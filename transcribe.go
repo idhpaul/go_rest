@@ -73,7 +73,7 @@ func create_transcribe(idx int, isOriginal bool) STTStatus {
 		// start the transcription job
 		_, err := client.StartTranscriptionJob(context.TODO(), &jobOriginal)
 		if err != nil {
-			log.Printf("Failed StartTranscriptionJob_original(%v). err: %v\n",idx, err)
+			log.Printf("Failed StartTranscriptionJob_original(%v). err: %v\n", idx, err)
 			sttResult.Result = err.Error()
 		} else {
 			log.Printf("Transcription_original(%v) started", idx)
@@ -104,7 +104,7 @@ func create_transcribe(idx int, isOriginal bool) STTStatus {
 		// start the transcription job
 		_, err := client.StartTranscriptionJob(context.TODO(), &job)
 		if err != nil {
-			log.Printf("Failed StartTranscriptionJob(%v). err: %v\n",idx, err)
+			log.Printf("Failed StartTranscriptionJob(%v). err: %v\n", idx, err)
 			sttResult.Result = err.Error()
 		} else {
 			log.Printf("Transcription(%v) started", idx)
@@ -149,7 +149,7 @@ func get_transcribe(idx int, isOriginal bool) STTStatus {
 			TranscriptionJobName: aws.String("dolbyEqualizeStt_" + strconv.Itoa(idx)),
 		})
 		if err != nil {
-			log.Printf("Failed GetTranscriptionJob(%v). err: %v\n", idx+1,err)
+			log.Printf("Failed GetTranscriptionJob(%v). err: %v\n", idx+1, err)
 			sttResult.Result = err.Error()
 		} else {
 			sttResult.Result = string(outputJob.TranscriptionJob.TranscriptionJobStatus)
@@ -332,7 +332,6 @@ func test_delete_all(num int, isOriginal bool) string {
 
 		waitDeleteTranscriptionJob.Wait()
 
-
 	} else {
 
 		var isDone = false
@@ -369,4 +368,158 @@ func test_delete_all(num int, isOriginal bool) string {
 	}
 
 	return "delete ok"
+}
+
+func create_videotranscribe(idx int) STTStatus {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Load the Shared AWS Configuration (~/.aws/config)
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(os.Getenv("S3_REGION")),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(os.Getenv("S3_ACCESSKEY"), os.Getenv("S3_PRIVATEDID"), "")),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client := tr.NewFromConfig(cfg)
+
+	var sttResult STTStatus
+
+	job := tr.StartTranscriptionJobInput{
+		TranscriptionJobName: aws.String("videoStt_" + strconv.Itoa(idx)),
+		Media: &types.Media{
+			MediaFileUri: aws.String("s3://" + os.Getenv("S3_BUCKET_NAME") + "/video/" + strconv.Itoa(idx+1) + ".mp4"),
+		},
+		MediaFormat:  "mp4",
+		LanguageCode: "en-US",
+
+		// OutputKey 의 subtitles 파일명 영향 받음
+		Subtitles: &types.Subtitles{
+			Formats:          []types.SubtitleFormat{types.SubtitleFormatSrt},
+			OutputStartIndex: aws.Int32(1),
+		},
+
+		// https://docs.aws.amazon.com/ko_kr/AmazonS3/latest/userguide/access-bucket-intro.html
+		// https://s3.us-east-2.amazonaws.com/{OutputBucketName}/{OutputKey}
+		// https://docs.aws.amazon.com/transcribe/latest/APIReference/API_StartTranscriptionJob.html#transcribe-StartTranscriptionJob-request-OutputBucketName
+		OutputBucketName: aws.String(os.Getenv("S3_BUCKET_NAME")),
+		OutputKey:        aws.String("video/" + strconv.Itoa(idx+1) + ".enT.json"),
+	}
+
+	// start the transcription job
+	_, err = client.StartTranscriptionJob(context.TODO(), &job)
+	if err != nil {
+		log.Printf("Failed StartTranscriptionJob(%v). err: %v\n", idx, err)
+		sttResult.Result = err.Error()
+	} else {
+		log.Printf("Transcription(%v) started", idx)
+		sttResult.Result = "Transcription started"
+	}
+
+	return sttResult
+}
+
+func get_videotranscribe(idx int) STTStatus {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Load the Shared AWS Configuration (~/.aws/config)
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(os.Getenv("S3_REGION")),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(os.Getenv("S3_ACCESSKEY"), os.Getenv("S3_PRIVATEDID"), "")),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client := tr.NewFromConfig(cfg)
+	var sttResult STTStatus
+
+	outputJob, err := client.GetTranscriptionJob(context.TODO(), &tr.GetTranscriptionJobInput{
+		TranscriptionJobName: aws.String("videoStt_" + strconv.Itoa(idx)),
+	})
+	if err != nil {
+		log.Printf("Failed GetTranscriptionJob(%v). err: %v\n", idx+1, err)
+		sttResult.Result = err.Error()
+	} else {
+		sttResult.Result = string(outputJob.TranscriptionJob.TranscriptionJobStatus)
+	}
+
+	return sttResult
+}
+
+func delete_videotranscribe(num int) string {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Load the Shared AWS Configuration (~/.aws/config)
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(os.Getenv("S3_REGION")),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(os.Getenv("S3_ACCESSKEY"), os.Getenv("S3_PRIVATEDID"), "")),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client := tr.NewFromConfig(cfg)
+
+	var isDone = false
+	var waitDeleteTranscriptionJob sync.WaitGroup
+	waitDeleteTranscriptionJob.Add(num)
+
+	for i := 0; i < num; i++ {
+
+		go func(i int, done bool) {
+
+			defer waitDeleteTranscriptionJob.Done() //끝나면 .Done() 호출
+			for {
+				_, err := client.DeleteTranscriptionJob(context.TODO(), &tr.DeleteTranscriptionJobInput{
+					TranscriptionJobName: aws.String("videoStt_" + strconv.Itoa(i)),
+				})
+				if err != nil {
+					log.Printf("Failed DeleteTranscriptionJob(idx : %v). err: %v\n", i, err)
+				} else {
+					log.Printf("delete video transcription(%v)", i)
+					done = true
+				}
+
+				if done {
+					break
+				}
+
+				time.Sleep(3 * time.Second)
+
+			}
+		}(i, isDone)
+	}
+
+	isDone = false
+	waitDeleteTranscriptionJob.Wait()
+
+	var waitCleanUpS3 sync.WaitGroup
+	waitCleanUpS3.Add(num)
+
+	for i := 0; i < num; i++ {
+
+		go func(i int) {
+			defer waitCleanUpS3.Done() //끝나면 .Done() 호출
+
+			cleanup_VideoTranscribeData(i, "video/"+strconv.Itoa(i+1)+".enT")
+
+		}(i)
+	}
+
+	return "delete ok"
+
 }

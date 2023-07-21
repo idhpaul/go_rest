@@ -213,6 +213,36 @@ func setRouter(router *gin.Engine) {
 		c.JSON(http.StatusOK, "Excel upload ok")
 	})
 
+	router.POST("/startVideoStt", func(c *gin.Context) {
+
+		var requestBody NeedSTT
+		c.Bind(&requestBody)
+
+		var jsondata = create_videotranscribe(requestBody.Index)
+
+		c.JSON(http.StatusOK, jsondata)
+	})
+
+	router.POST("/getVideoStt", func(c *gin.Context) {
+
+		var requestBody NeedSTT
+		c.Bind(&requestBody)
+
+		var jsondata = get_videotranscribe(requestBody.Index)
+
+		c.JSON(http.StatusOK, jsondata)
+	})
+
+	router.POST("/cleanUpVideoSTT", func(c *gin.Context) {
+
+		var requestBody NeedSTT
+		c.Bind(&requestBody)
+
+		var jsondata = delete_videotranscribe(requestBody.Index)
+
+		c.JSON(http.StatusOK, jsondata)
+	})
+
 	router.GET("/ping", func(c *gin.Context) {
 
 		c.JSON(http.StatusOK, gin.H{
@@ -222,7 +252,7 @@ func setRouter(router *gin.Engine) {
 }
 
 func main() {
-	//gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 
 	setRouter(router)

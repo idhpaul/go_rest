@@ -431,6 +431,83 @@ func cleanup_TranscribeData(idx int, objectKey string) {
 	}
 }
 
+func cleanup_VideoTranscribeData(idx int, objectKey string) {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Load the Shared AWS Configuration (~/.aws/config)
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion(os.Getenv("S3_REGION")),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(os.Getenv("S3_ACCESSKEY"), os.Getenv("S3_PRIVATEDID"), "")),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client := s3.NewFromConfig(cfg)
+
+	result, err := client.GetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(os.Getenv("S3_BUCKET_NAME")),
+		Key:    aws.String(objectKey+".json"),
+	})
+	if err != nil {
+		log.Printf("Couldn't get object %v. Here's why: %v\n", objectKey, err)
+		//return err
+	}else{
+		log.Printf("Get Object successful(%v)\n",objectKey);
+	}
+	defer result.Body.Close()
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		log.Printf("Couldn't read object body from %v. Here's why: %v\n", objectKey, err)
+	}
+	myString := string(body[:])
+	//log.Printf(myString)
+
+	value := gjson.Get(myString, "results.transcripts.0.transcript")
+	//println(value.String())
+
+	// make $index.txt
+	var bodydata = strings.NewReader(value.String())
+
+	_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket: aws.String(os.Getenv("S3_BUCKET_NAME")),
+		Key:    aws.String(objectKey+".txt"),
+		Body:   bodydata,
+	})
+	if err != nil {
+		log.Printf("Couldn't upload file %v. Here's why: %v\n",objectKey, err)
+	}else{
+		log.Printf("Put Object successful(%v)\n",objectKey+".txt");
+	}
+
+	ko_str := trnaslate_en_to_kr(value.String())
+	var translatedata = strings.NewReader(ko_str)
+
+	_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket: aws.String(os.Getenv("S3_BUCKET_NAME")),
+		Key:    aws.String(objectKey+"_ko.txt"),
+		Body:   translatedata,
+	})
+	if err != nil {
+		log.Printf("Couldn't upload file %v. Here's why: %v\n",objectKey, err)
+	}else{
+		log.Printf("Put Object successful(%v)\n",objectKey+"_ko.txt");
+	}
+
+	// delete $index.json
+	client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+		Bucket: aws.String(os.Getenv("S3_BUCKET_NAME")),
+		Key: aws.String(objectKey+".json"),
+	})
+	if err != nil {
+		log.Printf("Couldn't delete objects from bucket %v. Here's why: %v\n", objectKey, err)
+	}
+}
+
 
 func upload_excel(data []*multipart.FileHeader) {
 	err := godotenv.Load()
